@@ -1,7 +1,9 @@
 <html>
 <head>
-  <script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
   <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/2.3.0/shaka-player.compiled.js"></script>
+  <script src="https://shaka-player-demo.appspot.com/node_modules/mux.js/dist/mux.js"></script>
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/pushy/1.0.0/css/pushy.css">
 </head>
 
@@ -14,24 +16,32 @@
 
 <div id="container">
     <div class="menu-btn">&#9776; Channels</div>
-    <video id="video" style="width:100%; height:100%"></video>
+    <video controls id="video" style="width:100%; height:100%"></video>
 </div>
 
 <script>
-var hls = new Hls();
+shaka.polyfill.installAll();
+
 var video = document.getElementById('video');
+var proxy;
+var player;
+
+function cast() {
+   proxy.isCasting() ? proxy.suggestDisconnect() : proxy.cast()
+};
 
 function set_channel(c) {
-  hls.destroy();
-  hls = new Hls();
-  hls.attachMedia(video);
-  hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-	hls.loadSource(c);
+  if(proxy) proxy.destroy();
+  player = new shaka.Player(video);
+  proxy = new shaka.cast.CastProxy(video, player, "A15A181D");
+  proxy.getPlayer().load(c).then(function() {
+    video.play()
+  }).catch(function(e) {
+    console.log(e)
   });
-  video.play();
 }
 
-if (Hls.isSupported()) {
+if (shaka.Player.isBrowserSupported()) {
   $.get("/channels.json",function(sources) {
     $.each(sources, function(k,source) {
       var sublist = $('<li><span>' + k + '</span><ul></ul></li>');
